@@ -1,3 +1,4 @@
+// Periodically checks gamma and force clamps it to a certain range.
 class GammaGuard_V1 extends Actor
     placeable;
 
@@ -25,12 +26,12 @@ simulated event PostBeginPlay()
     }
 }
 
-final private function float GetGamma()
+final private simulated function float GetGamma()
 {
     return class'Client'.default.DisplayGamma;
 }
 
-final private function SetGamma(float NewGamma)
+final private simulated function SetGamma(float NewGamma)
 {
     ConsoleCommand("Gamma" @ NewGamma);
 
