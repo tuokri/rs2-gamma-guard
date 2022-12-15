@@ -1,4 +1,4 @@
-// Periodically checks gamma and force clamps it to a certain range.
+// Periodically checks gamma and brightness and force clamps them to a certain range.
 // https://eliotvu.com/blog/38/reading-and-writing-the-gamma-display-setting-in-udk
 class GammaGuard_V1 extends Actor
     placeable;
@@ -11,6 +11,11 @@ var(GammaGuard) private float MaxBrightness<Tooltip="Maximum allowed brightness.
 
 var private float CurrentGamma;
 var private float CurrentBrightness;
+
+// Cached UI object references.
+var private ROUISceneSettings SettingsScene;
+var private GameUISceneClient GameSceneClient;
+var private GFXSettings CurrentGFXSettings;
 
 simulated event PostBeginPlay()
 {
@@ -35,13 +40,15 @@ simulated event PostBeginPlay()
     }
 }
 
+// Call in server-side timer to nag to clients in case they
+// somehow manage to get the timer deactivated.
 final private function CheckClients()
 {
     `gglog("");
-    CheckClientLoop();
+    ClientCheckTimerIsActive();
 }
 
-final private reliable client function CheckClientLoop()
+final private reliable client function ClientCheckTimerIsActive()
 {
     `gglog("");
     if (!IsTimerActive('CheckGamma'))
@@ -53,34 +60,64 @@ final private reliable client function CheckClientLoop()
 
 final private simulated function float GetGamma()
 {
-    // return class'Client'.default.DisplayGamma;
     return class'Engine'.static.GetEngine().Client.DisplayGamma;
 }
 
 final private simulated function SetGamma(float NewGamma)
 {
     ConsoleCommand("Gamma" @ NewGamma);
-
-    // class'Client'.default.DisplayGamma = NewGamma;
-    // class'Client'.static.StaticSaveConfig();
-
     class'Engine'.static.GetEngine().Client.DisplayGamma = NewGamma;
 }
 
-final private simulated function float GetBrightness()
+final private simulated function bool GetBrightness(out float Brightness)
 {
-    // TODO: get CurrentGFXSettings.
+    if (SettingsScene != None)
+    {
+        CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
+        Brightness = CurrentGFXSettings.Brightness;
+        return True;
+    }
+
+    if (GameSceneClient == None)
+    {
+        GameSceneClient = class'UIRoot'.static.GetSceneClient();
+        `gglog("GameSceneClient:" @ GameSceneClient);
+    }
+
+    if (GameSceneClient != None)
+    {
+        ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', SettingsScene)
+        {
+            `gglog("SettingsScene:" @ SettingsScene);
+            `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
+            if (SettingsScene != None)
+            {
+                CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
+                Brightness = CurrentGFXSettings.Brightness;
+                return True;
+            }
+        }
+    }
+
+    Brightness = -1.0;
+    return False;
 }
 
 final private simulated function SetBrightness(float NewBrightness)
 {
     // TODO: check ROUISceneSettings::OnBrightnessSliderChanged for proper scaling.
     ConsoleCommand("Brightness" @ NewBrightness);
+    CurrentGFXSettings.Brightness = NewBrightness;
+    if (SettingsScene != None)
+    {
+        SettingsScene.SetGFXSettings(False);
+    }
 }
 
 final private simulated function CheckGamma()
 {
     CurrentGamma = GetGamma();
+
     `gglog("CurrentGamma:" @ CurrentGamma);
 
     if (CurrentGamma < MinGamma)
@@ -90,6 +127,20 @@ final private simulated function CheckGamma()
     else if (CurrentGamma > MaxGamma)
     {
         SetGamma(MaxGamma);
+    }
+
+    if (GetBrightness(CurrentBrightness))
+    {
+        `gglog("CurrentBrightness:" @ CurrentBrightness);
+
+        if (CurrentBrightness < MinBrightness)
+        {
+            SetBrightness(MinBrightness);
+        }
+        else if (CurrentBrightness > MinBrightness)
+        {
+            SetBrightness(MaxBrightness);
+        }
     }
 }
 
@@ -113,4 +164,6 @@ DefaultProperties
 
     MinGamma=0.0
     MaxGamma=10.0
+    MinBrightness=0.0
+    MaxBrightness=10.0
 }
