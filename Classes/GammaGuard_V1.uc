@@ -6,8 +6,8 @@ class GammaGuard_V1 extends Actor
 var(GammaGuard) private float MinGamma<Tooltip="Minimum allowed gamma. Should be less than MaxGamma."|UIMin=0.0|UIMax=10.0>;
 var(GammaGuard) private float MaxGamma<Tooltip="Maximum allowed gamma. Should be greater than MinGamma."|UIMin=0.0|UIMax=10.0>;
 
-var(GammaGuard) private float MinBrightness<Tooltip="Minimum allowed brightness. Should be less than MinBrightness."|UIMin=0.0|UIMax=10.0>;
-var(GammaGuard) private float MaxBrightness<Tooltip="Maximum allowed brightness. Should be greater than MaxBrightness."|UIMin=0.0|UIMax=10.0>;
+var(GammaGuard) private float MinBrightness<Tooltip="Minimum allowed brightness. Should be less than MaxBrightness."|UIMin=0.0|UIMax=10.0>;
+var(GammaGuard) private float MaxBrightness<Tooltip="Maximum allowed brightness. Should be greater than MinBrightness."|UIMin=0.0|UIMax=10.0>;
 
 var private float CurrentGamma;
 var private float CurrentBrightness;
