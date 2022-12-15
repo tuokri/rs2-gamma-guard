@@ -1,4 +1,5 @@
 // Periodically checks gamma and force clamps it to a certain range.
+// https://eliotvu.com/blog/38/reading-and-writing-the-gamma-display-setting-in-udk
 class GammaGuard_V1 extends Actor
     placeable;
 
@@ -52,15 +53,18 @@ final private reliable client function CheckClientLoop()
 
 final private simulated function float GetGamma()
 {
-    return class'Client'.default.DisplayGamma;
+    // return class'Client'.default.DisplayGamma;
+    return class'Engine'.static.GetEngine().Client.DisplayGamma;
 }
 
 final private simulated function SetGamma(float NewGamma)
 {
     ConsoleCommand("Gamma" @ NewGamma);
 
-    class'Client'.default.DisplayGamma = newGamma;
-    class'Client'.static.StaticSaveConfig();
+    // class'Client'.default.DisplayGamma = NewGamma;
+    // class'Client'.static.StaticSaveConfig();
+
+    class'Engine'.static.GetEngine().Client.DisplayGamma = NewGamma;
 }
 
 final private simulated function float GetBrightness()
