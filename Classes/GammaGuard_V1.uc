@@ -73,8 +73,8 @@ final private simulated function bool GetBrightness(out float Brightness)
 {
     if (SettingsScene != None)
     {
-        CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
-        Brightness = CurrentGFXSettings.Brightness;
+        `gglog("using existing" @ SettingsScene);
+        Brightness = SettingsScene.CurrentGFXSettings.Brightness;
         return True;
     }
 
@@ -84,18 +84,38 @@ final private simulated function bool GetBrightness(out float Brightness)
         `gglog("GameSceneClient:" @ GameSceneClient);
     }
 
+    `gglog("Found ROUIScene_Settings   :" @ FindObject("ROUIScene_Settings", class'ROUISceneSettings'));
+    `gglog("Found ROUIScene_Settings_0 :" @ FindObject("ROUIScene_Settings_0", class'ROUISceneSettings'));
+    `gglog("Found ROUISceneSettings    :" @ FindObject("ROUISceneSettings_0", class'ROUISceneSettings'));
+    `gglog("Found ROUISceneSettings_0  :" @ FindObject("ROUISceneSettings", class'ROUISceneSettings'));
+    `gglog("Found Transient.ROUISceneSettings   :" @ FindObject("Transient.ROUISceneSettings", class'ROUISceneSettings'));
+    `gglog("Found Transient.ROUISceneSettings_0 :" @ FindObject("Transient.ROUISceneSettings_0", class'ROUISceneSettings'));
+    `gglog("Found ROGame.ROUISceneSettings   :" @ FindObject("ROGame.ROUISceneSettings", class'ROUISceneSettings'));
+    `gglog("Found ROGame.ROUISceneSettings_0 :" @ FindObject("ROGame.ROUISceneSettings_0", class'ROUISceneSettings'));
+
+    `gglog("DynLoad ROGame.ROUISceneSettings :" @ ROUISceneSettings(DynamicLoadObject("ROGame.ROUISceneSettings", class'ROUISceneSettings', True)));
+
     if (GameSceneClient != None)
     {
-        ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', SettingsScene)
+        // Try to find directly with scene tag. Only works if the settings menu is currently open.
+        SettingsScene = ROUISceneSettings(GameSceneClient.FindSceneByTag('ROUIScene_Settings'));
+        if (SettingsScene != None)
         {
+            `gglog("found by tag:");
             `gglog("SettingsScene:" @ SettingsScene);
             `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
-            if (SettingsScene != None)
-            {
-                CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
-                Brightness = CurrentGFXSettings.Brightness;
-                return True;
-            }
+            Brightness = SettingsScene.CurrentGFXSettings.Brightness;
+            return True;
+        }
+
+        // Search active scenes. Only works if the settings menu is currently open.
+        ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', SettingsScene)
+        {
+            `gglog("found with iterator:");
+            `gglog("SettingsScene:" @ SettingsScene);
+            `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
+            Brightness = SettingsScene.CurrentGFXSettings.Brightness;
+            return True;
         }
     }
 
@@ -107,9 +127,12 @@ final private simulated function SetBrightness(float NewBrightness)
 {
     // TODO: check ROUISceneSettings::OnBrightnessSliderChanged for proper scaling.
     ConsoleCommand("Brightness" @ NewBrightness);
-    CurrentGFXSettings.Brightness = NewBrightness;
     if (SettingsScene != None)
     {
+        SettingsScene.CurrentGFXSettings.Brightness = NewBrightness;
+        CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
+        CurrentGFXSettings.Brightness = NewBrightness;
+        SettingsScene.NewGFXSettings = CurrentGFXSettings;
         SettingsScene.SetGFXSettings(False);
     }
 }
