@@ -9,13 +9,15 @@ var(GammaGuard) private float MaxGamma<Tooltip="Maximum allowed gamma. Should be
 var(GammaGuard) private float MinBrightness<Tooltip="Minimum allowed brightness. Should be less than MaxBrightness."|UIMin=0.0|UIMax=10.0>;
 var(GammaGuard) private float MaxBrightness<Tooltip="Maximum allowed brightness. Should be greater than MinBrightness."|UIMin=0.0|UIMax=10.0>;
 
-var private float CurrentGamma;
-var private float CurrentBrightness;
+var() private editconst float CurrentGamma;
+var() private editconst float CurrentBrightness;
 
 // Cached UI object references.
-var private ROUISceneSettings SettingsScene;
-var private GameUISceneClient GameSceneClient;
-var private GFXSettings CurrentGFXSettings;
+var() private editconst ROUISceneSettings SettingsScene;
+var() private editconst GameUISceneClient GameSceneClient;
+
+var() private editconst string UISceneObjectName;
+var() private editconst int UISceneNamePostfix;
 
 simulated event PostBeginPlay()
 {
@@ -26,17 +28,20 @@ simulated event PostBeginPlay()
     switch (WorldInfo.NetMode)
     {
         case NM_DedicatedServer:
-            SetTimer(1.0, True, 'CheckClients');
+            SetTimer(5.0, True, 'CheckClients');
             break;
         case NM_Standalone:
             SetTimer(0.5, True, 'CheckGamma');
+            SetTimer(2.0, True, 'CheckBrightness');
             break;
         case NM_Client:
             SetTimer(0.5, True, 'CheckGamma');
+            SetTimer(2.0, True, 'CheckBrightness');
             break;
         default:
-            SetTimer(1.0, True, 'CheckClients');
+            SetTimer(5.0, True, 'CheckClients');
             SetTimer(0.5, True, 'CheckGamma');
+            SetTimer(2.0, True, 'CheckBrightness');
     }
 }
 
@@ -51,10 +56,17 @@ final private function CheckClients()
 final private reliable client function ClientCheckTimerIsActive()
 {
     `gglog("");
+
     if (!IsTimerActive('CheckGamma'))
     {
         `gglog("CheckGamma not active");
         SetTimer(0.5, True, 'CheckGamma');
+    }
+
+    if (!IsTimerActive('CheckBrightness'))
+    {
+        `gglog("CheckBrightness not active");
+        SetTimer(2.0, True, 'CheckBrightness');
     }
 }
 
@@ -69,12 +81,12 @@ final private simulated function SetGamma(float NewGamma)
     class'Engine'.static.GetEngine().Client.DisplayGamma = NewGamma;
 }
 
-final private simulated function bool GetBrightness(out float Brightness)
+final private simulated function bool GetBrightness()
 {
     if (SettingsScene != None)
     {
         `gglog("using existing" @ SettingsScene);
-        Brightness = SettingsScene.CurrentGFXSettings.Brightness;
+        CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
         return True;
     }
 
@@ -94,6 +106,27 @@ final private simulated function bool GetBrightness(out float Brightness)
     `gglog("Found ROGame.ROUISceneSettings_0 :" @ FindObject("ROGame.ROUISceneSettings_0", class'ROUISceneSettings'));
 
     `gglog("DynLoad ROGame.ROUISceneSettings :" @ ROUISceneSettings(DynamicLoadObject("ROGame.ROUISceneSettings", class'ROUISceneSettings', True)));
+    `gglog("DynLoad ROUISceneSettings        :" @ ROUISceneSettings(DynamicLoadObject("ROUISceneSettings", class'ROUISceneSettings', True)));
+
+    // `gglog("FindObject loop UISceneNamePostfix :" @ UISceneNamePostfix);
+    // for (UISceneNamePostfix = 0; UISceneNamePostfix < 1000; ++UISceneNamePostfix)
+    // {
+    //     UISceneObjectName = "ROUISceneSettings_" $ UISceneNamePostfix;
+    //     SettingsScene = ROUISceneSettings(FindObject(UISceneObjectName, class'ROUISceneSettings'));
+
+    //     if (SettingsScene == None)
+    //     {
+    //         SettingsScene = ROUISceneSettings(FindObject("Transient." $ UISceneObjectName, class'ROUISceneSettings'));
+    //         SettingsScene.GetGFXSettings();
+    //     }
+
+    //     if (SettingsScene != None)
+    //     {
+    //         `gglog("FindObject    :" @ UISceneObjectName);
+    //         CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
+    //         return True;
+    //     }
+    // }
 
     if (GameSceneClient != None)
     {
@@ -102,9 +135,9 @@ final private simulated function bool GetBrightness(out float Brightness)
         if (SettingsScene != None)
         {
             `gglog("found by tag:");
-            `gglog("SettingsScene:" @ SettingsScene);
+            `gglog("SettingsScene.Name:" @ SettingsScene.Name);
             `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
-            Brightness = SettingsScene.CurrentGFXSettings.Brightness;
+            CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
             return True;
         }
 
@@ -112,28 +145,53 @@ final private simulated function bool GetBrightness(out float Brightness)
         ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', SettingsScene)
         {
             `gglog("found with iterator:");
-            `gglog("SettingsScene:" @ SettingsScene);
+            `gglog("SettingsScene.Name:" @ SettingsScene.Name);
             `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
-            Brightness = SettingsScene.CurrentGFXSettings.Brightness;
+            CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
             return True;
         }
     }
 
-    Brightness = -1.0;
+    if (SettingsScene == None && GameSceneClient != None)
+    {
+        SettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings');
+        SettingsScene.GetGFXSettings();
+        CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
+        return True;
+    }
+
+    CurrentBrightness = -1.0;
     return False;
 }
 
 final private simulated function SetBrightness(float NewBrightness)
 {
+    `gglog("NewBrightness:" @ NewBrightness);
+
     // TODO: check ROUISceneSettings::OnBrightnessSliderChanged for proper scaling.
     ConsoleCommand("Brightness" @ NewBrightness);
     if (SettingsScene != None)
     {
         SettingsScene.CurrentGFXSettings.Brightness = NewBrightness;
-        CurrentGFXSettings = SettingsScene.CurrentGFXSettings;
-        CurrentGFXSettings.Brightness = NewBrightness;
-        SettingsScene.NewGFXSettings = CurrentGFXSettings;
+        SettingsScene.NewGFXSettings.Brightness = NewBrightness;
         SettingsScene.SetGFXSettings(False);
+    }
+}
+
+final private simulated function CheckBrightness()
+{
+    if (GetBrightness())
+    {
+        `gglog("CurrentBrightness:" @ CurrentBrightness);
+
+        if (CurrentBrightness < MinBrightness)
+        {
+            SetBrightness(MinBrightness);
+        }
+        else if (CurrentBrightness > MaxBrightness)
+        {
+            SetBrightness(MaxBrightness);
+        }
     }
 }
 
@@ -150,20 +208,6 @@ final private simulated function CheckGamma()
     else if (CurrentGamma > MaxGamma)
     {
         SetGamma(MaxGamma);
-    }
-
-    if (GetBrightness(CurrentBrightness))
-    {
-        `gglog("CurrentBrightness:" @ CurrentBrightness);
-
-        if (CurrentBrightness < MinBrightness)
-        {
-            SetBrightness(MinBrightness);
-        }
-        else if (CurrentBrightness > MinBrightness)
-        {
-            SetBrightness(MaxBrightness);
-        }
     }
 }
 
