@@ -16,8 +16,10 @@ var() private editconst float CurrentBrightness;
 var() private editconst ROUISceneSettings SettingsScene;
 var() private editconst GameUISceneClient GameSceneClient;
 
-var() private editconst string UISceneObjectName;
-var() private editconst int UISceneNamePostfix;
+var() private bool bUsingFakeSettingsScene;
+
+// var() private editconst string UISceneObjectName;
+// var() private editconst int UISceneNamePostfix;
 
 simulated event PostBeginPlay()
 {
@@ -87,7 +89,10 @@ final private simulated function bool GetBrightness()
     {
         `gglog("using existing" @ SettingsScene);
         CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
-        return True;
+        if (!bUsingFakeSettingsScene)
+        {
+            return True;
+        }
     }
 
     if (GameSceneClient == None)
@@ -128,7 +133,7 @@ final private simulated function bool GetBrightness()
     //     }
     // }
 
-    if (GameSceneClient != None)
+    if (GameSceneClient != None && bUsingFakeSettingsScene)
     {
         // Try to find directly with scene tag. Only works if the settings menu is currently open.
         SettingsScene = ROUISceneSettings(GameSceneClient.FindSceneByTag('ROUIScene_Settings'));
@@ -157,6 +162,12 @@ final private simulated function bool GetBrightness()
         SettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings');
         SettingsScene.GetGFXSettings();
         CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
+        bUsingFakeSettingsScene = True;
+        return True;
+    }
+
+    if (bUsingFakeSettingsScene)
+    {
         return True;
     }
 
@@ -233,4 +244,6 @@ DefaultProperties
     MaxGamma=10.0
     MinBrightness=0.0
     MaxBrightness=10.0
+
+    bUsingFakeSettingsScene=False
 }
