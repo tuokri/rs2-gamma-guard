@@ -46,9 +46,9 @@ var(GammaGuard) private float MaxGamma<
 Tooltip="Maximum allowed gamma. Valid gamma range could be around [0.5-2.0] depending on the map. Must be greater than MinGamma."|UIMin=0.0|UIMax=10.0>;
 
 var(GammaGuard) private float MinBrightness<
-Tooltip="Minimum allowed brightness. Valid brightness range could be around [0.5-1.5] depending on the map. Must be less than MaxBrightness."|UIMin=0.0|UIMax=10.0>;
+Tooltip="Minimum allowed brightness. Valid brightness range could be around [0.5-2.6] depending on the map. Must be less than MaxBrightness."|UIMin=0.0|UIMax=10.0>;
 var(GammaGuard) private float MaxBrightness<
-Tooltip="Maximum allowed brightness. Valid brightness range could be around [0.5-1.5] depending on the map. Must be greater than MinBrightness."|UIMin=0.0|UIMax=10.0>;
+Tooltip="Maximum allowed brightness. Valid brightness range could be around [0.5-2.6] depending on the map. Must be greater than MinBrightness."|UIMin=0.0|UIMax=10.0>;
 
 // Last gamma value read from client settings.
 var() private editconst float CurrentGamma;
