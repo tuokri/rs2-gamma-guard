@@ -72,8 +72,7 @@ var(GammaGuardAdvanced) private float ServerSideCheckInterval;
 // Default is 0.5 seconds.
 var(GammaGuardAdvanced) private float ClientSideGammaCheckInterval;
 // Time between client side brightness checks in seconds.
-// Should be kept relatively high as it introduces some log
-// spam. Around 10 seconds or more should be safe.
+// Default is 2 seconds.
 var(GammaGuardAdvanced) private float ClientSideBrightnessCheckInterval;
 
 // Reserved for future API-breaking changes. Currently unused.
@@ -173,6 +172,9 @@ final private simulated function SetGamma(float NewGamma)
 
 final private simulated function bool GetBrightness()
 {
+    // `gglog("FakeSettingsScene:" @ FakeSettingsScene);
+    // `gglog("RealSettingsScene:" @ RealSettingsScene);
+
     if (FakeSettingsScene != None)
     {
         // Always get brightness from the fake scene.
@@ -208,7 +210,7 @@ final private simulated function bool GetBrightness()
 
     if (FakeSettingsScene == None && GameSceneClient != None)
     {
-        FakeSettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings');
+        FakeSettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings', 'Fake_ROUIScene_Settings');
         FakeSettingsScene.GetGFXSettings();
         CurrentBrightness = FakeSettingsScene.CurrentGFXSettings.Brightness;
         return True;
@@ -303,7 +305,7 @@ DefaultProperties
 
     ServerSideCheckInterval=10.0
     ClientSideGammaCheckInterval=0.5
-    ClientSideBrightnessCheckInterval=10.0
+    ClientSideBrightnessCheckInterval=2.0
 
     ConfigVersion=`GAMMA_GUARD_V1_CFG_VERSION
 }
