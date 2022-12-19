@@ -2,3 +2,6 @@
     `log(self.class.name $ "::" $ GetFuncName() $ "(): " $ `msg, \
     `cond, \
     `if(`tag) name("GammaGuard-" $ string(`tag)) `else 'GammaGuard' `endif)
+
+// Not used currently. Reserved for future API-breaking changes.
+`define GAMMA_GUARD_V1_CFG_VERSION 1
