@@ -55,14 +55,9 @@ var() private editconst float CurrentGamma;
 // Last brightness value read from client settings.
 var() private editconst float CurrentBrightness;
 
-// Cached UI object reference.
-var() private editconst ROUISceneSettings SettingsScene;
-// Cached UI object reference.
+var() private editconst ROUISceneSettings FakeSettingsScene;
+var() private editconst ROUISceneSettings RealSettingsScene;
 var() private editconst GameUISceneClient GameSceneClient;
-
-// Whether we are loading values from the real settings scene or a
-// purposefully create fake temporary scene. For internal logic only.
-var() private bool bUsingFakeSettingsScene;
 
 // Time between server side checks in seconds.
 // The server sends a request to every player client every
@@ -178,13 +173,15 @@ final private simulated function SetGamma(float NewGamma)
 
 final private simulated function bool GetBrightness()
 {
-    if (SettingsScene != None)
+    if (FakeSettingsScene != None)
     {
-        // Always get brightness from fake scene.
-        if (bUsingFakeSettingsScene)
+        // Always get brightness from the fake scene.
+        FakeSettingsScene.GetGFXSettings();
+        CurrentBrightness = FakeSettingsScene.CurrentGFXSettings.Brightness;
+
+        // Safe to return here if we have a reference to the real scene already.
+        if (RealSettingsScene != None)
         {
-            SettingsScene.GetGFXSettings();
-            CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
             return True;
         }
     }
@@ -192,43 +189,33 @@ final private simulated function bool GetBrightness()
     if (GameSceneClient == None)
     {
         GameSceneClient = class'UIRoot'.static.GetSceneClient();
-        // `gglog("GameSceneClient:" @ GameSceneClient);
     }
 
-    /* TODO: only use real scene when setting new values.
-    if (GameSceneClient != None && bUsingFakeSettingsScene)
+    if (GameSceneClient != None && RealSettingsScene == None)
     {
         // Try to find directly with scene tag. Only works if the settings menu is currently open.
-        SettingsScene = ROUISceneSettings(GameSceneClient.FindSceneByTag('ROUIScene_Settings'));
-        if (SettingsScene != None)
-        {
-            // `gglog("found by tag:");
-            // `gglog("SettingsScene.Name:" @ SettingsScene.Name);
-            // `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
-            CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
-            bUsingFakeSettingsScene = False;
-            return True;
-        }
+        RealSettingsScene = ROUISceneSettings(GameSceneClient.FindSceneByTag('ROUIScene_Settings'));
 
-        // Search active scenes. Only works if the settings menu is currently open.
-        ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', SettingsScene)
+        if (RealSettingsScene == None)
         {
-            // `gglog("found with iterator:");
-            // `gglog("SettingsScene.Name:" @ SettingsScene.Name);
-            // `gglog("SettingsScene.SceneTag:" @ SettingsScene.SceneTag);
-            CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
-            bUsingFakeSettingsScene = False;
-            return True;
+            // Search active scenes. Only works if the settings menu is currently open.
+            ForEach GameSceneClient.AllActiveScenes(class'ROUISceneSettings', RealSettingsScene)
+            {
+                break;
+            }
         }
     }
-    */
 
-    if (SettingsScene == None && GameSceneClient != None)
+    if (FakeSettingsScene == None && GameSceneClient != None)
     {
-        SettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings');
-        SettingsScene.GetGFXSettings();
-        CurrentBrightness = SettingsScene.CurrentGFXSettings.Brightness;
-        bUsingFakeSettingsScene = True;
+        FakeSettingsScene = GameSceneClient.CreateScene(class'ROUISceneSettings');
+        FakeSettingsScene.GetGFXSettings();
+        CurrentBrightness = FakeSettingsScene.CurrentGFXSettings.Brightness;
+        return True;
+    }
+
+    if (FakeSettingsScene != None)
+    {
         return True;
     }
 
@@ -241,11 +228,20 @@ final private simulated function SetBrightness(float NewBrightness)
     `gglog("NewBrightness:" @ NewBrightness);
 
     ConsoleCommand("Brightness" @ NewBrightness);
-    if (SettingsScene != None)
+
+    // Use the real scene if it's available.
+    if (RealSettingsScene != None)
     {
-        SettingsScene.CurrentGFXSettings.Brightness = NewBrightness;
-        SettingsScene.NewGFXSettings.Brightness = NewBrightness;
-        SettingsScene.SetGFXSettings(False);
+        RealSettingsScene.CurrentGFXSettings.Brightness = NewBrightness;
+        RealSettingsScene.NewGFXSettings.Brightness = NewBrightness;
+        RealSettingsScene.SetGFXSettings(False);
+    }
+    // Fall back to the fake scene if not.
+    else if (FakeSettingsScene != None)
+    {
+        FakeSettingsScene.CurrentGFXSettings.Brightness = NewBrightness;
+        FakeSettingsScene.NewGFXSettings.Brightness = NewBrightness;
+        FakeSettingsScene.SetGFXSettings(False);
     }
 }
 
@@ -304,8 +300,6 @@ DefaultProperties
     MaxGamma=10.0
     MinBrightness=0.0
     MaxBrightness=10.0
-
-    bUsingFakeSettingsScene=False
 
     ServerSideCheckInterval=10.0
     ClientSideGammaCheckInterval=0.5
