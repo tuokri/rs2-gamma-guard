@@ -138,14 +138,20 @@ final private function CheckClients()
 {
     if (WorldInfo.NetMode == NM_DedicatedServer)
     {
+        // `gglog("telling clients to check themselves...");
         ClientCheckTimerIsActive();
     }
 }
 
+// TODO: does not work as expected. Should be done via a replicated
+// variable or repnotify.
 final private reliable client function ClientCheckTimerIsActive()
 {
+    // `gglog("server nagging?");
+
     if (GetALocalPlayerController() == None || WorldInfo.NetMode == NM_DedicatedServer)
     {
+        // `gglog("outta here");
         return;
     }
 
@@ -295,13 +301,16 @@ DefaultProperties
     End Object
     Components.Add(Sprite)
 
-    RemoteRole=ROLE_SimulatedProxy
+    RemoteRole=ROLE_AutonomousProxy
     NetUpdateFrequency=100
     bHidden=True
     bOnlyDirtyReplication=True
     bAlwaysRelevant=True
     bSkipActorPropertyReplication=True
     bAlwaysTick=True
+    bNoDelete=True
+    bGameRelevant=True
+    bMovable=False
 
     MinGamma=0.0
     MaxGamma=10.0
