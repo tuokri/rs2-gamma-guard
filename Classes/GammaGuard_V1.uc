@@ -111,7 +111,7 @@ simulated event PostBeginPlay()
     ValidateRanges();
 }
 
-final private function ValidateRanges()
+final private simulated function ValidateRanges()
 {
     if (MinGamma > MaxGamma)
     {
@@ -136,23 +136,28 @@ final private function ValidateRanges()
 // somehow manage to get the timer deactivated.
 final private function CheckClients()
 {
-    `gglog("telling clients to check their timers");
-    ClientCheckTimerIsActive();
+    if (WorldInfo.NetMode == NM_DedicatedServer)
+    {
+        ClientCheckTimerIsActive();
+    }
 }
 
 final private reliable client function ClientCheckTimerIsActive()
 {
-    `gglog("got request from server to check timers");
+    if (GetALocalPlayerController() == None || WorldInfo.NetMode == NM_DedicatedServer)
+    {
+        return;
+    }
 
     if (!IsTimerActive('CheckGamma'))
     {
-        `gglog("CheckGamma not active");
+        `gglog("CheckGamma was not active");
         SetTimer(ClientSideGammaCheckInterval, True, 'CheckGamma');
     }
 
     if (!IsTimerActive('CheckBrightness'))
     {
-        `gglog("CheckBrightness not active");
+        `gglog("CheckBrightness was not active");
         SetTimer(ClientSideBrightnessCheckInterval, True, 'CheckBrightness');
     }
 }
